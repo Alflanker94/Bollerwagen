@@ -1,0 +1,183 @@
+#!/usr/bin/env python
+# coding: Latin-1
+
+from os import system
+from sys import exit
+from time import sleep
+from Controler import Cont
+import RPi.GPIO as GPIO
+import pygame
+
+import Controler
+#from EmulatorGUI import GPIO
+
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+
+intervall = 0.1
+#GPIO ausgänge am Relaybord
+Links = 5
+Rechts = 6
+Speed = 1
+Freigabe = 13
+Rueckwerts = 16
+Horn = 21
+Mute = 26
+#GPIO eingänge
+LenkanschlagLinks = 25
+LenkanschlagRechts = 24
+
+Ausgange = [Links, Rechts, Rueckwerts, Speed, Horn, Mute, Freigabe]
+Eingaenge = [LenkanschlagLinks, LenkanschlagRechts]
+
+def beenden(Outputs, re):
+
+    for OP in Outputs:
+        GPIO.output(OP, True)
+    GPIO.cleanup()
+    if re == True:
+        system('sudo reboot')
+    exit()
+
+def IOsetzen(Liste, EA, INIT):  # Liste der ein ode ausgänge /
+    # sind es ein oder ausgänge[IN/OUT] / wenn inittialisirung dan wet [None/1/0]
+    if EA == "IN":
+        EA = GPIO.IN
+    elif EA == "OUT":
+        EA = GPIO.OUT
+    else:
+        return ()
+
+    if INIT is None :
+        for IO in Liste:
+            GPIO.setup(IO, EA)
+    else :
+        for IO in Liste:
+            GPIO.setup(IO, EA, initial=INIT)
+
+    #Links / Rechts / Freigabe / Rückwerts / Horn / Mute
+
+
+"""for DO in Ausgange :
+    GPIO.setup(DO, GPIO.OUT, initial=1)
+
+for IN in Eingaenge:
+    GPIO.setup(IN, GPIO.IN,)"""
+
+
+pygame.init()
+if pygame.joystick.get_count() == 0:
+
+    print("Kein Joystick verbunden programm wird beendet.")
+    beenden(Ausgange, False)
+
+j = pygame.joystick.Joystick(0)
+j.init()
+IOsetzen(Ausgange, "OUT", 1)
+IOsetzen(Eingaenge, "IN", None)
+pwm = GPIO.PWM(Speed, 10000)
+pwm.start(0)
+C = Cont(j)
+
+
+"""
+# Lenkung inizialisirung
+GPIO.output(Rechts, True)
+ZStart = time.time()
+while GPIO.input("anschlag links") == False:
+    GPIO.output(Links, False)
+GPIO.output(Links, True)
+ZEnde = time.time()
+MaxZeit = ZEnde - ZStart
+Zeit = MaxZeit / 2
+GPIO.output(Rechts, False)
+sleep(Zeit)
+GPIO.output(Rechts, True)
+"""
+
+try:
+
+    while j.get_button(C.Select) == 0 or j.get_button(C.Start) == 0:
+        pygame.event.pump()
+        speed = j.get_axis(1)
+        direktion = j.get_axis(3)
+
+        if j.get_button(C.PS) != 0: # Python programm beenden ----------------------für test zwecke
+            j.quit()
+            GPIO.cleanup()
+            exit()
+
+        # Speed
+        if j.get_axis(1) != 0.00:
+            ANL = speed
+            if speed <= 0.0:
+                ANL = -speed
+            pwm.ChangeDutyCycle(ANL * 10)
+            print("Spannung beträgt %5.2fV" %(ANL * 3.3))
+
+        elif j.get_axis(1) == 0.00:
+            pwm.ChangeDutyCycle(0.0)
+        # Fahrtrichtung
+        #if j.get_axis(2) != 0.00:
+
+
+                                            # Fahrt Richtungen
+        #if j.get_button(x) != 0:               # Vor
+        if speed <= -0.1 :
+            GPIO.output(Freigabe, False)
+            GPIO.output(Rueckwerts, True)
+
+        # elif j.get_button(down) != 0:         # Zurueck
+        elif speed >= 0.1 :
+            GPIO.output(Freigabe, False)
+            GPIO.output(Rueckwerts, False)
+
+        else:
+            GPIO.output(Freigabe, True)
+            GPIO.output(Rueckwerts, True)
+
+
+        """
+        # Lenk Richtugen mit rüchstellung
+        if direktion <= 0.0:
+            LenkungAktiv = True
+            Rcihtung =
+        """
+
+
+       # Lenk Richtugen ohne rüchstellung
+        if j.get_button(C.Right) != 0 and GPIO.input(LenkanschlagRechts) == True: # RECHTS
+            GPIO.output(Links, True)
+            GPIO.output(Rechts, False)
+
+        elif j.get_button(C.Left) != 0 and GPIO.input(LenkanschlagLinks) == True:  # Links
+            GPIO.output(Rechts, True)
+            GPIO.output(Links, False)
+
+        else:
+            GPIO.output(Rechts, True)
+            GPIO.output(Links, True)
+
+
+        # Sonderfunktionen
+        if j.get_button(C.X) != 0:
+            GPIO.output(Horn, False)
+
+        else:
+            GPIO.output(Horn, True)
+
+        if j.get_button(C.Kreis) != 0:
+            GPIO.output(Mute, False)
+
+        else:
+            GPIO.output(Mute, True)
+
+        sleep(intervall)
+    j.quit()
+    print("reboot")
+    beenden(Ausgange, True)
+
+except KeyboardInterrupt:
+    j.quit()
+    print("KeyInterrupt")
+    beenden(Ausgange, False)
