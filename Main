@@ -1,5 +1,6 @@
-#!/usr/bin/env python
+
 # coding: Latin-1
+#!/usr/bin/env python
 
 from os import system
 from sys import exit
@@ -9,7 +10,6 @@ import RPi.GPIO as GPIO
 import pygame
 
 import Controler
-#from EmulatorGUI import GPIO
 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
@@ -23,19 +23,15 @@ Freigabe = 13
 Rueckwerts = 16
 Horn = 21
 Mute = 26
-#GPIO eingänge
-LenkanschlagLinks = 25
-LenkanschlagRechts = 24
 
 Ausgange = [Links, Rechts, Rueckwerts, Speed, Horn, Mute, Freigabe]
-Eingaenge = [LenkanschlagLinks, LenkanschlagRechts]
 
 def beenden(Outputs, re):
 
     for OP in Outputs:
         GPIO.output(OP, True)
     GPIO.cleanup()
-    if re == True:
+    if re:
         system('sudo reboot')
     exit()
 
@@ -58,42 +54,17 @@ def IOsetzen(Liste, EA, INIT):  # Liste der ein ode ausgänge /
     #Links / Rechts / Freigabe / Rückwerts / Horn / Mute
 
 
-"""for DO in Ausgange :
-    GPIO.setup(DO, GPIO.OUT, initial=1)
-
-for IN in Eingaenge:
-    GPIO.setup(IN, GPIO.IN,)"""
-
 
 pygame.init()
-if pygame.joystick.get_count() == 0:
-
-    print("Kein Joystick verbunden programm wird beendet.")
-    beenden(Ausgange, False)
+while pygame.joystick.get_count() == 0:
+    sleep(2)
 
 j = pygame.joystick.Joystick(0)
 j.init()
 IOsetzen(Ausgange, "OUT", 1)
-IOsetzen(Eingaenge, "IN", None)
 pwm = GPIO.PWM(Speed, 10000)
 pwm.start(0)
 C = Cont(j)
-
-
-"""
-# Lenkung inizialisirung
-GPIO.output(Rechts, True)
-ZStart = time.time()
-while GPIO.input("anschlag links") == False:
-    GPIO.output(Links, False)
-GPIO.output(Links, True)
-ZEnde = time.time()
-MaxZeit = ZEnde - ZStart
-Zeit = MaxZeit / 2
-GPIO.output(Rechts, False)
-sleep(Zeit)
-GPIO.output(Rechts, True)
-"""
 
 try:
 
@@ -113,7 +84,7 @@ try:
             if speed <= 0.0:
                 ANL = -speed
             pwm.ChangeDutyCycle(ANL * 10)
-            print("Spannung beträgt %5.2fV" %(ANL * 3.3))
+            #print("Spannung beträgt %5.2fV" %(ANL * 3.3))
 
         elif j.get_axis(1) == 0.00:
             pwm.ChangeDutyCycle(0.0)
@@ -135,14 +106,6 @@ try:
         else:
             GPIO.output(Freigabe, True)
             GPIO.output(Rueckwerts, True)
-
-
-        """
-        # Lenk Richtugen mit rüchstellung
-        if direktion <= 0.0:
-            LenkungAktiv = True
-            Rcihtung =
-        """
 
 
        # Lenk Richtugen ohne rüchstellung
@@ -174,10 +137,10 @@ try:
 
         sleep(intervall)
     j.quit()
-    print("reboot")
+    #print("reboot")
     beenden(Ausgange, True)
 
 except KeyboardInterrupt:
     j.quit()
     print("KeyInterrupt")
-    beenden(Ausgange, False)
+    beenden(Ausgange, True)
